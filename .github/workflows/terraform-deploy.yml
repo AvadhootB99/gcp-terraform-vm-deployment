@@ -18,6 +18,7 @@ jobs:
   terraform:
     name: 'Terraform Build & Deploy'
     runs-on: ubuntu-latest
+    environment: MY_SECRETS
     defaults:
       run:
         working-directory: ./terraform
