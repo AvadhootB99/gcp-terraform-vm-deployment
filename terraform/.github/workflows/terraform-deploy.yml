@@ -1,0 +1,50 @@
+name: 'Terraform GCP Deployment (WIF)'
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+env:
+  TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+# CRITICAL: These permissions are required for OIDC authentication
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  terraform:
+    name: 'Terraform Build & Deploy'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./terraform
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Authenticate to Google Cloud via WIF
+      uses: google-github-actions/auth@v2
+      with:
+        workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+        service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+
+    - name: Terraform Init
+      run: terraform init
+
+    - name: Terraform Format
+      run: terraform fmt -check
+      continue-on-error: true
+
+    - name: Terraform Plan
+      run: terraform plan -out=tfplan
+
+    - name: Terraform Apply
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: terraform apply -auto-approve tfplan
